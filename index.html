@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🌸 凤仙花完全模拟实验 - AI虚拟实验室</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&display=swap');
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    
+    body {
+      font-family: 'Nunito', 'PingFang SC', sans-serif;
+      background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+      min-height: 100dvh;
+      color: #004d40;
+      overflow-x: hidden;
+    }
+
+    /* ── 布局：桌面横向、移动纵向 ── */
+    .app {
+      display: flex;
+      flex-direction: row;
+      min-height: 100dvh;
+      width: 100%;
+      padding: 12px;
+      gap: 12px;
+    }
+
+    /* ── 侧边栏 ── */
+    .sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 10;
+      overflow-y: auto;
+      max-height: calc(100dvh - 24px);
+    }
+
+    /* 移动端抽屉式侧边栏 */
+    @media (max-width: 768px) {
+      .app {
+        flex-direction: column;
+        padding: 8px;
+        gap: 8px;
+        overflow-y: auto;
+        min-height: 100dvh;
+      }
+      .sidebar {
+        width: 100%;
+        max-height: none;
+        overflow-y: visible;
+        position: relative;
+        border-radius: 16px;
+        padding: 12px;
+      }
+    }
+
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .sidebar {
+        width: 260px;
+      }
+    }
+    
+    .title {
+      font-size: clamp(1.1em, 4vw, 1.6em);
+      font-weight: 800;
+      text-align: center;
+      background: linear-gradient(90deg, #e91e63, #9c27b0);
+      -webkit-background-clip: text;
+      color: transparent;
+      background-clip: text;
+    }
+
+    .config-box {
+      background: #f1f8e9;
+      border: 2px solid #c5e1a5;
+      padding: 12px;
+      border-radius: 12px;
+    }
+
+    .config-title {
+      font-weight: 800;
+      font-size: clamp(0.9em, 3vw, 1.1em);
+      margin-bottom: 8px;
+      color: #33691e;
+    }
+    
+    .btn-group { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+    .btn {
+      flex: 1; min-width: 40px;
+      padding: 7px 4px;
+      border: 2px solid #aed581; 
+      border-radius: 8px; background: #fff; cursor: pointer;
+      font-weight: 800; transition: 0.2s; color: #558b2f; text-align: center;
+      font-size: clamp(0.75em, 2.5vw, 0.95em);
+    }
+    .btn.active { background: #8bc34a; color: white; border-color: #689f38; }
+    .btn:hover { background: #f1f8e9; }
+
+    /* 拖拽工具 */
+    .tools-box {
+      display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap; 
+    }
+    
+    .tool {
+      background: #fff; border: 3px dashed #80cbc4;
+      border-radius: 12px; padding: 8px; text-align: center;
+      cursor: grab; transition: 0.3s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      position: relative; flex: 1; min-width: 70px;
+      touch-action: none;
+    }
+    .tool:hover { transform: translateY(-3px); border-color: #009688; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .tool:active { cursor: grabbing; opacity: 0.6; }
+    .tool-icon { font-size: clamp(1.6em, 5vw, 2.2em); margin-bottom: 4px; pointer-events: none; }
+    .tool-name { font-weight: 800; color: #00796b; pointer-events: none; font-size: clamp(0.7em, 2.5vw, 0.9em); }
+
+    /* 触摸拖拽时的跟随幽灵元素 */
+    .touch-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      font-size: 3em;
+      transform: translate(-50%, -50%);
+      opacity: 0.8;
+    }
+    
+    .action-feedback {
+      position: fixed; pointer-events: none; font-size: 3em; z-index: 9999;
+      animation: floatUp 2s ease-out forwards; opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+    @keyframes floatUp {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+      100% { transform: translate(-50%, -150px) scale(1.5); opacity: 0; }
+    }
+
+    /* 主实验区 */
+    .main-area {
+      flex: 1;
+      background: url('https://www.transparenttextures.com/patterns/cubes.png') rgba(255,255,255,0.4);
+      border-radius: 20px;
+      position: relative;
+      border: 4px solid white;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      overflow-y: auto;
+      min-height: 400px;
+    }
+
+    @media (max-width: 768px) {
+      .main-area {
+        min-height: 500px;
+        padding: 12px;
+        border-radius: 16px;
+      }
+    }
+
+    .troughs-container {
+      display: flex; flex-direction: column; gap: 60px;
+      align-items: center; justify-content: center; flex: 1;
+      padding: 20px 0;
+    }
+
+    @media (max-width: 480px) {
+      .troughs-container {
+        gap: 40px;
+        padding: 10px 0;
+      }
+    }
+
+    /* 种植槽 */
+    .planter-wrapper {
+      position: relative; width: 100%; display: flex; flex-direction: column; align-items: center;
+    }
+    
+    .planter-box {
+      background: url('box.png') center center / 100% 100% no-repeat;
+      border-radius: 8px;
+      position: relative;
+      transition: all 0.3s;
+      overflow: visible;
+      width: min(90%, 480px);
+    }
+    
+    .planter-box.drag-over {
+      outline: 4px solid #69f0ae;
+      box-shadow: 0 0 30px #69f0ae;
+      transform: scale(1.02);
+    }
+    
+    .planter-label {
+      position: absolute; top: -28px; left: 8px;
+      background: rgba(255,255,255,0.92); padding: 3px 10px; border-radius: 8px;
+      font-weight: 800; color: #5d4037; font-size: clamp(0.7em, 2.5vw, 0.9em);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      white-space: nowrap;
+    }
+
+    #planter-small, #planter-large {
+      min-height: 100px;
+      transition: height 0.4s ease;
+    }
+
+    /* 实时数据板 */
+    .data-board {
+      background: rgba(255,255,255,0.85); backdrop-filter: blur(10px);
+      padding: 8px 14px; border-radius: 14px;
+      display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap;
+      margin-top: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      border: 2px solid rgba(255,255,255,0.5);
+      position: relative; z-index: 100;
+    }
+    .data-item { text-align: center; }
+    .data-val { font-size: clamp(1.2em, 4vw, 1.8em); font-weight: 900; color: #00796b; }
+    .data-lbl { font-size: clamp(0.7em, 2vw, 0.85em); color: #555; font-weight: 800; }
+
+    /* 植物绘图区 */
+    .plant-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 5;
+    }
+    
+    .progress-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.3); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; color: white;
+      font-size: clamp(1em, 3vw, 1.5em); font-weight: 900; opacity: 0; pointer-events: none;
+      transition: 0.3s; z-index: 20; text-align: center; padding: 8px;
+    }
+    .progress-overlay.active { opacity: 1; pointer-events: all; }
+
+    button.reset-btn {
+      margin-top: auto; padding: 10px 16px; background: #ffe082;
+      border: 2px solid #ffb300; border-radius: 12px; cursor: pointer;
+      font-size: clamp(0.9em, 3vw, 1.1em); font-weight: 800; color: #ff6f00;
+      transition: background 0.2s;
+    }
+    button.reset-btn:hover, button.reset-btn:active { background: #ffca28; }
+
+    /* 移动端触摸提示 */
+    .mobile-hint {
+      display: none;
+      background: rgba(0,150,136,0.1);
+      border: 1px dashed #80cbc4;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 0.8em;
+      color: #00695c;
+      text-align: center;
+    }
+    @media (max-width: 768px) {
+      .mobile-hint { display: block; }
+      .desktop-hint { display: none; }
+    }
+
+    /* 点击投放按钮（移动端专用） */
+    .tap-zone {
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .tap-zone {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .tap-btn {
+        flex: 1;
+        padding: 10px 6px;
+        border: 2px solid #80cbc4;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.8);
+        cursor: pointer;
+        font-weight: 800;
+        font-size: 0.85em;
+        color: #00796b;
+        text-align: center;
+        transition: 0.2s;
+      }
+      .tap-btn:active { background: #b2dfdb; transform: scale(0.97); }
+    }
+
+    /* 数据对比区自适应 */
+    .compare-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: clamp(0.8em, 2.5vw, 0.95em);
+      color: #004d40;
+    }
+
+    #auto-spacing-info {
+      background: rgba(255,255,255,0.7);
+      padding: 8px 10px;
+      border-radius: 10px;
+      margin-top: 8px;
+      border: 1px dashed #aed581;
+      font-size: clamp(0.75em, 2.5vw, 0.9em);
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <!-- 侧边栏工具区 -->
+  <div class="sidebar">
+    <div class="title">🌻 凤仙花实验区</div>
+    
+    <div class="config-box">
+      <div class="config-title">1. 选择播种数量</div>
+      <div style="font-size:0.85em;color:#555;margin-bottom:4px;">🌰 播种行数</div>
+      <div class="btn-group" id="rows-qty-btns">
+        <div class="btn" data-val="1">1 行</div>
+        <div class="btn active" data-val="2">2 行</div>
+        <div class="btn" data-val="3">3 行</div>
+        <div class="btn" data-val="4">4 行</div>
+      </div>
+      <div style="font-size:0.85em;color:#555;margin-bottom:4px;margin-top:4px;">🌰 每行播种列数</div>
+      <div class="btn-group" id="cols-qty-btns">
+        <div class="btn" data-val="2">2 列</div>
+        <div class="btn active" data-val="5">5 列</div>
+        <div class="btn" data-val="8">8 列</div>
+        <div class="btn" data-val="10">10 列</div>
+      </div>
+      <div id="auto-spacing-info">
+        <div style="font-weight:900;color:#33691e;margin-bottom:4px;">📐 共 <strong>10</strong> 颗种子</div>
+        <div>🌱 槽A: 行距 10.0cm · 株距 8.3cm</div>
+        <div>🌱 槽B: 行距 10.0cm · 株距 8.3cm</div>
+      </div>
+    </div>
+    
+    <div class="config-title" style="margin-top:4px;">2. 操作工具</div>
+    <div class="mobile-hint">📱 点击工具后再点击种植槽进行操作</div>
+    <div class="desktop-hint" style="font-size:0.82em;color:#555;">🖥️ 拖拽工具到种植槽</div>
+    <div class="tools-box">
+      <div class="tool" draggable="true" id="tool-seed" data-selected="false">
+        <div class="tool-icon"><img src="zhong.png" style="width:36px;height:36px;object-fit:contain;pointer-events:none;" /></div>
+        <div class="tool-name">种子</div>
+      </div>
+      
+      <div class="tool" draggable="true" id="tool-water" data-selected="false">
+        <div class="tool-icon">🚿</div>
+        <div class="tool-name">水壶</div>
+      </div>
+      
+      <div class="tool" draggable="true" id="tool-fertilizer" data-selected="false">
+        <div class="tool-icon">🧪</div>
+        <div class="tool-name">肥料</div>
+      </div>
+    </div>
+
+    <!-- 移动端点击投放按钮 -->
+    <div class="tap-zone" id="tap-zone">
+      <div class="tap-btn" id="tap-btn-A" onclick="tapApply('planter-small')">➕ 投放到槽A</div>
+      <div class="tap-btn" id="tap-btn-B" onclick="tapApply('planter-large')">➕ 投放到槽B</div>
+    </div>
+    
+    <div class="config-box" style="margin-top:4px; background:#e0f7fa; border-color:#80deea;">
+      <div class="config-title" style="color:#006064;">📊 实验数据对比</div>
+      
+      <!-- 小号槽数据 -->
+      <div style="background:rgba(255,255,255,0.7); box-shadow:0 2px 4px rgba(0,0,0,0.05); padding:8px 10px; border-radius:10px; margin-bottom:8px;">
+        <div style="font-weight:900; color:#00838f; font-size:0.85em; margin-bottom:4px;">🌱 种植槽 A (50cm × 30cm)</div>
+        <div class="compare-row">
+          <div>株高: <strong id="d-sma-h" style="color:#00796b; font-size:1.2em;">0.0</strong> cm</div>
+          <div>叶片: <strong id="d-sma-l" style="color:#00796b; font-size:1.2em;">0</strong> 片</div>
+        </div>
+      </div>
+      
+      <!-- 第二个槽数据 -->
+      <div style="background:rgba(255,255,255,0.7); box-shadow:0 2px 4px rgba(0,0,0,0.05); padding:8px 10px; border-radius:10px;">
+        <div style="font-weight:900; color:#00838f; font-size:0.85em; margin-bottom:4px;">🌱 种植槽 B (50cm × 30cm)</div>
+        <div class="compare-row">
+          <div>株高: <strong id="d-lar-h" style="color:#00796b; font-size:1.2em;">0.0</strong> cm</div>
+          <div>叶片: <strong id="d-lar-l" style="color:#00796b; font-size:1.2em;">0</strong> 片</div>
+        </div>
+      </div>
+    </div>
+    
+    <button class="reset-btn" onclick="location.reload()">🔄 重置实验</button>
+  </div>
+  
+  <!-- 种植区 -->
+  <div class="main-area" id="main-area">
+    <div class="troughs-container">
+      
+      <!-- 小号槽 -->
+      <div class="planter-wrapper">
+        <div class="planter-box" id="planter-small">
+          <div class="planter-label">种植槽 A（50cm × 30cm）</div>
+          <div class="plant-layer" id="layer-small"></div>
+          <div class="progress-overlay" id="prog-small">待播种...</div>
+        </div>
+      </div>
+
+      <!-- 第二个槽 -->
+      <div class="planter-wrapper">
+        <div class="planter-box" id="planter-large">
+          <div class="planter-label">种植槽 B（50cm × 30cm）</div>
+          <div class="plant-layer" id="layer-large"></div>
+          <div class="progress-overlay" id="prog-large">待播种...</div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── 全局状态 ── */
+let config = { rcount: 2, ccount: 5 };
+let selectedTool = null; // 移动端选中的工具
+
+let planters = {
+  'planter-small': { id:'planter-small', layerId: 'layer-small', progId: 'prog-small', state: 0, plants: [], health: 'good', hId: 'd-sma-h', lId: 'd-sma-l' },
+  'planter-large': { id:'planter-large', layerId: 'layer-large', progId: 'prog-large', state: 0, plants: [], health: 'excellent', hId: 'd-lar-h', lId: 'd-lar-l' }
+};
+
+/* ── 种植槽尺寸动态计算 ── */
+function updatePlanterSizes() {
+  const isMobile = window.innerWidth <= 768;
+  const maxW = isMobile ? window.innerWidth * 0.82 : 480;
+  const heightPx = Math.max(100, Math.min(380, Math.round((config.rcount + 2) * 50)));
+  ['planter-small', 'planter-large'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.height = heightPx + 'px';
+    el.style.width = Math.min(maxW, el.offsetWidth || maxW) + 'px';
+  });
+  updateSpacingInfo();
+}
+
+function updateSpacingInfo() {
+  const total = config.rcount * config.ccount;
+  const PS = (50 / (config.ccount + 1)).toFixed(1);
+  const RS = (30 / (config.rcount + 1)).toFixed(1);
+  const el = document.getElementById('auto-spacing-info');
+  if (el) {
+    el.innerHTML = `
+      <div style="font-weight:900;color:#33691e;margin-bottom:4px;">📐 共 <strong>${total}</strong> 颗种子</div>
+      <div>🌱 槽A: 行距 ${RS}cm · 株距 ${PS}cm</div>
+      <div>🌱 槽B: 行距 ${RS}cm · 株距 ${PS}cm</div>
+    `;
+  }
+}
+
+/* ── 按钮事件 ── */
+document.querySelectorAll('#rows-qty-btns .btn').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#rows-qty-btns .btn').forEach(o => o.classList.remove('active'));
+  b.classList.add('active'); config.rcount = parseInt(b.dataset.val);
+  updatePlanterSizes();
+});
+document.querySelectorAll('#cols-qty-btns .btn').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#cols-qty-btns .btn').forEach(o => o.classList.remove('active'));
+  b.classList.add('active'); config.ccount = parseInt(b.dataset.val);
+  updatePlanterSizes();
+});
+
+window.addEventListener('load', () => setTimeout(updatePlanterSizes, 50));
+window.addEventListener('resize', () => updatePlanterSizes());
+
+/* ── 移动端工具选择逻辑 ── */
+function isTouchDevice() {
+  return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 768);
+}
+
+function selectTool(toolId) {
+  selectedTool = toolId;
+  document.querySelectorAll('.tool').forEach(t => {
+    t.style.borderColor = '#80cbc4';
+    t.style.background = '#fff';
+    t.style.transform = '';
+  });
+  if (toolId) {
+    const el = document.getElementById(toolId);
+    el.style.borderColor = '#00acc1';
+    el.style.background = '#e0f7fa';
+    el.style.transform = 'scale(1.05)';
+  }
+  // 显示/隐藏投放按钮
+  const tapZone = document.getElementById('tap-zone');
+  tapZone.style.display = (toolId && isTouchDevice()) ? 'flex' : '';
+}
+
+function tapApply(boxId) {
+  if (!selectedTool) return;
+  const box = document.getElementById(boxId);
+  const rect = box.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  handleToolDrop(selectedTool, boxId, cx, cy);
+  selectTool(null);
+}
+
+/* ── 工具点击选择（移动端） ── */
+document.querySelectorAll('.tool').forEach(tool => {
+  tool.addEventListener('click', (e) => {
+    if (!isTouchDevice()) return; // 桌面端不走这条路
+    if (selectedTool === tool.id) {
+      selectTool(null);
+    } else {
+      selectTool(tool.id);
+    }
+  });
+});
+
+/* ── 拖拽 API（桌面端） ── */
+const tools = document.querySelectorAll('.tool');
+const boxes = document.querySelectorAll('.planter-box');
+let draggedTool = null;
+
+tools.forEach(tool => {
+  tool.addEventListener('dragstart', (e) => {
+    draggedTool = tool.id;
+    e.dataTransfer.setData('text/plain', tool.id);
+    tool.style.opacity = '0.5';
+  });
+  tool.addEventListener('dragend', () => tool.style.opacity = '1');
+});
+
+boxes.forEach(box => {
+  box.addEventListener('dragover', e => {
+    e.preventDefault();
+    const p = planters[box.id];
+    if (draggedTool === 'tool-seed' && p.state === 0) box.classList.add('drag-over');
+    if ((draggedTool === 'tool-water' || draggedTool === 'tool-fertilizer') && p.state >= 2 && p.state < 6 && !p.locked) box.classList.add('drag-over');
+  });
+  box.addEventListener('dragleave', e => box.classList.remove('drag-over'));
+  box.addEventListener('drop', e => {
+    e.preventDefault(); box.classList.remove('drag-over');
+    handleToolDrop(draggedTool, box.id, e.clientX, e.clientY);
+  });
+});
+
+/* ── 触摸拖拽（移动端原生拖拽） ── */
+let touchGhost = null;
+let touchTool = null;
+
+tools.forEach(tool => {
+  tool.addEventListener('touchstart', e => {
+    if (isTouchDevice()) return; // 已用 click 方式替代，不重复处理
+  }, { passive: true });
+});
+
+/* ── 种植槽点击（桌面端辅助） ── */
+boxes.forEach(box => {
+  box.addEventListener('click', e => {
+    if (!isTouchDevice()) return;
+    if (selectedTool) {
+      tapApply(box.id);
+    }
+  });
+});
+
+/* ── 交互逻辑处理 ── */
+async function handleToolDrop(toolId, boxId, mouseX, mouseY) {
+  const p = planters[boxId];
+  if (p.locked) return;
+
+  if (toolId === 'tool-seed') {
+    if (p.state !== 0) return;
+    
+    showFeedback('<img src="zhong.png" style="width:1em;height:1em;object-fit:contain;"/>', mouseX, mouseY, true);
+    p.locked = true;
+    
+    setupPlantsLayer(p);
+    
+    showProgress(p.progId, "已播种... 等待 5 秒发芽 🌱");
+    await sleep(5000);
+    p.state = 2; 
+    renderPlants(p);
+    showProgress(p.progId, "发芽成功！请操作水壶/肥料来促进生长", 3000);
+    p.locked = false;
+
+  } else if (toolId === 'tool-water' || toolId === 'tool-fertilizer') {
+    if (p.state < 2 || p.state >= 6) return;
+    
+    showFeedback(toolId === 'tool-water' ? '🚿' : '🧪', mouseX, mouseY);
+    p.locked = true;
+    p.state++;
+    
+    showProgress(p.progId, `幼苗吸收中... 等待 3 秒生长`);
+    await sleep(3000);
+    
+    renderPlants(p); 
+    updateDataBoard(p);
+
+    if (p.state >= 6) {
+      showProgress(p.progId, "🌸 实验结束！凤仙花开花了！", 5000);
+      spawnConfetti();
+    } else {
+      showProgress(p.progId, "长高了！可继续浇水或施肥", 3000);
+    }
+    p.locked = false;
+  }
+}
+
+/* ── 种植布局计算 ── */
+function setupPlantsLayer(p) {
+  const boxDom = document.getElementById(p.id);
+  const W = boxDom.offsetWidth;
+  const H = boxDom.offsetHeight;
+
+  const physicalWidthCm = 50;
+  const physicalHeightCm = 30;
+
+  const bestR = config.rcount;
+  const bestC = config.ccount;
+  const seedCount = bestR * bestC;
+
+  const soilTopRatio  = 0.16;
+  const soilBotRatio  = 0.415;
+  const soilLeftFront  = 0.08,  soilRightFront  = 0.91;
+  const soilLeftBack   = 0.28,  soilRightBack   = 0.77;
+
+  const soilTop = H * soilTopRatio;
+  const soilBot = H * soilBotRatio;
+  const soilH   = soilBot - soilTop;
+
+  const frontSoilW = W * (soilRightFront - soilLeftFront);
+  let pxPerCm = frontSoilW / physicalWidthCm;
+  if (pxPerCm < 1.0) pxPerCm = 1.0;
+  p.pxPerCm = pxPerCm;
+
+  p.plantSpacing = physicalWidthCm / (bestC + 1);
+  p.rowSpacing   = physicalHeightCm / (bestR + 1);
+
+  p.plants = [];
+  for (let r = 0; r < bestR; r++) {
+    const ty = (r + 1) / (bestR + 1);
+    const py = soilTop + soilH * ty;
+    const rowLeft  = W * (soilLeftBack  + (soilLeftFront  - soilLeftBack)  * ty);
+    const rowRight = W * (soilRightBack + (soilRightFront - soilRightBack) * ty);
+    const rowW     = rowRight - rowLeft;
+    const zScale = 0.50 + 0.50 * ty;
+
+    for (let c = 0; c < bestC; c++) {
+      const px = rowLeft + rowW * (c + 1) / (bestC + 1);
+      p.plants.push({ x: px, y: py, scale: zScale });
+    }
+  }
+
+  const actualAreaCm2 = physicalWidthCm * physicalHeightCm;
+  const areaPerPlant = actualAreaCm2 / seedCount;
+  if (areaPerPlant >= 200) p.health = 'excellent';
+  else if (areaPerPlant >= 100) p.health = 'good';
+  else p.health = 'poor';
+
+  p.plants.sort((a, b) => a.y - b.y);
+
+  p.state = 1;
+  p.curH = 0; p.curL = 0; p.curF = 0;
+  renderPlants(p);
+}
+
+/* ── 统一绘图与数据渲染 ── */
+function renderPlants(p) {
+  const layer = document.getElementById(p.layerId);
+  let html = '';
+  
+  if (p.state === 1) {
+    p.curH = 0; p.curL = 0; p.curF = 0;
+  } else if (p.state === 2) {
+    p.curH = 2; p.curL = 2; p.curF = 0; 
+  } else if (p.state >= 3) {
+    const maxH = p.health==='excellent' ? 45 : (p.health==='good' ? 30 : 15);
+    const maxL = p.health==='excellent' ? 14 : (p.health==='good' ? 8 : 4);
+    const maxF = p.health==='excellent' ? 6 : (p.health==='good' ? 3 : 1);
+    
+    const ratio = Math.min(1, (p.state - 2) / 4);
+    p.curH = (maxH * ratio).toFixed(1);
+    p.curL = Math.floor(maxL * ratio);
+    
+    if (p.state === 6) p.curF = maxF; 
+  }
+
+  p.plants.forEach(pt => {
+    const varScale = pt.scale * (0.8 + Math.random()*0.4); 
+
+    if(p.state === 1) {
+      html += makeLocDiv(pt.x, pt.y, makeSeedSVG(varScale));
+    } else if (p.state === 2) {
+      html += makePlantImgDiv(pt.x, pt.y, makeSproutSVG(pt.scale), Math.round(pt.y));
+    } else if (p.state === 3 || p.state === 4 || p.state === 5) {
+      const spacingPx = (p.pxPerCm || 6) * (p.plantSpacing || 10);
+      const imgSrcMap = { 3: 'youmiao1.png', 4: 'youmiao2.png', 5: 'youmiao3.png' };
+      const imgSrc = imgSrcMap[p.state];
+      const stateExtraH = p.state === 5 ? 1.80 : p.state === 4 ? 1.0 : 0.75;
+      const maxAllowedH = pt.y * stateExtraH;
+      const imgH = Math.max(p.state === 5 ? 150 : 60, maxAllowedH);
+      const minW = p.state === 5 ? 140 : 80;
+      const imgW = Math.max(minW, Math.min(p.state === 5 ? 280 : 180, spacingPx * (p.state === 5 ? 2.5 : 1.6)) * pt.scale);
+      html += makePlantImgDiv(pt.x, pt.y, `<div style="position:relative;left:-${imgW/2}px;"><img src="${imgSrc}" style="width:${imgW}px;height:${imgH}px;object-fit:contain;filter:drop-shadow(1px 3px 5px rgba(0,0,0,0.3));pointer-events:none;" /></div>`, Math.round(pt.y));
+    } else if (p.state === 6) {
+      const spacingPx = (p.pxPerCm || 6) * (p.plantSpacing || 10);
+      const imgW = Math.min(200, spacingPx * 1.8) * varScale;
+      const bottomOff = layer.offsetHeight - pt.y;
+      const photoHtml = `<img src="feng.png" style="position:absolute; bottom:${bottomOff}px; left:${pt.x}px; width:${imgW}px; transform: translateX(-50%); transform-origin: bottom center; z-index:${Math.round(pt.y)}; filter:drop-shadow(2px 5px 6px rgba(0,0,0,0.4)); pointer-events:none; object-fit:contain;" />`;
+      html += photoHtml;
+    } else {
+      const stemH = parseFloat(p.curH) * 3 * varScale; 
+      let plantDom = makeStemLeavesSVG(varScale, p, stemH, p.curL);
+      html += makeLocDiv(pt.x, pt.y, plantDom);
+    }
+  });
+  
+  layer.innerHTML = html;
+}
+
+function updateDataBoard(p) {
+  document.getElementById(p.hId).textContent = p.curH || "0.0";
+  document.getElementById(p.lId).textContent = p.curL || "0";
+}
+
+function makeLocDiv(x, y, inner) {
+  return `<div style="position:absolute;left:${x}px;top:${y}px;transform:translate(0, -100%);z-index:${Math.round(y)};overflow:visible;pointer-events:none;">${inner}</div>`;
+}
+function makePlantImgDiv(x, y, inner, zIdx) {
+  return `<div style="position:absolute;left:${x}px;top:${y}px;transform:translate(0, -72%);z-index:${zIdx};overflow:visible;pointer-events:none;">${inner}</div>`;
+}
+
+/* ── 凤仙花 SVG 图形引擎 ── */
+function getPlantColors(health) {
+  return {
+    excellent: { stemBase: '#7b1fa2', stemTop: '#4caf50', leaf: '#2e7d32', leafLight: '#4caf50', vein: 'rgba(255,255,255,0.4)' },
+    good:      { stemBase: '#8e24aa', stemTop: '#66bb6a', leaf: '#43a047', leafLight: '#81c784', vein: 'rgba(255,255,255,0.3)' },
+    poor:      { stemBase: '#9fa8da', stemTop: '#aed581', leaf: '#9ccc65', leafLight: '#c5e1a5', vein: 'rgba(255,255,255,0.4)' }
+  }[health] || { stemBase: '#7b1fa2', stemTop: '#4caf50', leaf: '#2e7d32', leafLight: '#4caf50', vein: 'rgba(255,255,255,0.4)' };
+}
+
+function makeSeedSVG(ps) {
+  const w = 32 * ps, h = 32 * ps;
+  return `<div style="position:relative;left:-${w/2}px;"><img src="zhong.png" style="width:${w}px;height:${h}px;object-fit:contain;filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.35));pointer-events:none;" /></div>`;
+}
+
+function makeSproutSVG(ps) {
+  const w = Math.max(90, 140 * ps), h = Math.max(80, 120 * ps);
+  return `<div style="position:relative;left:-${w/2}px;"><img src="faya.png" style="width:${w}px;height:${h}px;object-fit:contain;filter:drop-shadow(1px 2px 4px rgba(0,0,0,0.3));pointer-events:none;" /></div>`;
+}
+
+function makeStemLeavesSVG(ps, pd, curH, curL) {
+  const c = getPlantColors(pd.health);
+  const spacingPx = (pd.plantSpacing || 10) * (pd.pxPerCm || 6);
+  const W = Math.min(150 * ps, spacingPx * 1.4);
+  const H = Math.round((curH + 50) * ps);
+  const cx = W / 2, base = H; 
+  const stemW = Math.max(3.5, 7 * ps);
+  const gId = 'stG' + Math.random().toString(36).substring(2,6);
+
+  let svg = `<div class="plant-wrap" style="position:relative;width:${W}px;height:${H}px;left:-${cx}px;bottom:0;">
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible;position:absolute;bottom:0;left:0;">
+      <defs>
+        <linearGradient id="${gId}" x1="0" x2="0" y1="1" y2="0">
+          <stop offset="0%" stop-color="${c.stemBase}"/>
+          <stop offset="80%" stop-color="${c.stemTop}"/>
+        </linearGradient>
+        <linearGradient id="leafGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="${c.leafLight}"/>
+          <stop offset="100%" stop-color="${c.leaf}"/>
+        </linearGradient>
+      </defs>
+      <path d="M ${cx} ${base} Q ${cx-1} ${base - curH/2} ${cx} ${base - curH}" fill="none" stroke="url(#${gId})" stroke-width="${stemW}" stroke-linecap="round"/>`;
+
+  if(curH > 0) {
+    svg += `<ellipse cx="${cx}" cy="${base - curH}" rx="${stemW*1.2}" ry="${stemW*1.5}" fill="${c.stemTop}"/>`;
+  }
+
+  const leafPath = "M 0 0 C 15 -12, 60 -18, 90 0 C 60 18, 15 12, 0 0 Z";
+  const veinPath = "M 0 0 C 30 -5, 60 -5, 85 0";
+
+  const leavesToDraw = Math.min(curL, 12);
+  for (let li = 0; li < leavesToDraw; li++) {
+    const leafBot = base - (curH * (li + 1) / (leavesToDraw + 1));
+    const side = li % 2 === 0 ? -1 : 1; 
+    
+    svg += `<ellipse cx="${cx}" cy="${leafBot}" rx="${stemW*0.9}" ry="${stemW*1.1}" fill="${c.stemTop}"/>`;
+    
+    const ageRatio = 1 - (li / Math.max(1, leavesToDraw));
+    const sizeFactor = 0.4 + 0.6 * ageRatio; 
+    const targetL = (pd.health === 'excellent' ? 55 : pd.health === 'good' ? 38 : 22) * ps * sizeFactor;
+    const targetW = targetL * 0.35;
+    const scaleX = targetL / 90, scaleY = targetW / 20; 
+    
+    let angle = -30 - 20 * ageRatio; 
+    if(side < 0) angle = -180 - angle;
+    angle += (Math.random() * 8 - 4);
+    
+    svg += `<g transform="translate(${cx}, ${leafBot}) rotate(${angle}) scale(${scaleX}, ${scaleY})">
+      <path d="${leafPath}" fill="url(#leafGrad)"/>
+      <path d="${veinPath}" stroke="rgba(255,255,255,0.4)" stroke-width="${2.0 / Math.max(scaleX, scaleY)}" fill="none" class="leaf-vein"/>
+    </g>`;
+  }
+  svg += `</svg></div>`;
+  return svg;
+}
+
+/* ── 辅助工具类 ── */
+function showProgress(id, text, timeout=0) {
+  const e = document.getElementById(id);
+  e.textContent = text; e.classList.add('active');
+  if(timeout) setTimeout(()=>e.classList.remove('active'), timeout);
+}
+function showFeedback(content, x, y, isHtml=false) {
+  const el = document.createElement('div');
+  el.className = 'action-feedback';
+  if (isHtml) el.innerHTML = content; else el.textContent = content;
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2000);
+}
+function spawnConfetti() {
+  for(let i=0;i<50;i++){
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;width:10px;height:10px;background:${['#e91e63','#ffeb3b','#4caf50','#00bcd4'][i%4]};left:${Math.random()*100}vw;top:-20px;z-index:9999;animation:fall ${2+Math.random()*2}s linear forwards;border-radius:50%;`;
+    document.body.appendChild(el);
+  }
+}
+const style = document.createElement('style');
+style.innerHTML = `@keyframes fall { to { transform: translateY(110vh) rotate(720deg); }}`;
+document.head.appendChild(style);
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
