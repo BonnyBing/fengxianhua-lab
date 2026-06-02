@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌸 凤仙花实验数据大屏</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', 'PingFang SC', sans-serif;
+      background: linear-gradient(135deg, #1a0533 0%, #0d1b3e 50%, #003322 100%);
+      min-height: 100dvh;
+      color: #e0f2f1;
+      overflow-x: hidden;
+    }
+
+    /* ── 顶部标题栏 ── */
+    .header {
+      text-align: center;
+      padding: 24px 20px 12px;
+      position: relative;
+    }
+    .header h1 {
+      font-size: clamp(1.4em, 5vw, 2.4em);
+      font-weight: 900;
+      background: linear-gradient(90deg, #f48fb1, #ce93d8, #80deea);
+      -webkit-background-clip: text;
+      color: transparent;
+      background-clip: text;
+      letter-spacing: 0.04em;
+    }
+    .header .subtitle {
+      font-size: clamp(0.75em, 2.5vw, 0.95em);
+      color: #80cbc4;
+      margin-top: 4px;
+      font-weight: 700;
+    }
+    .refresh-info {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: clamp(0.7em, 2vw, 0.85em);
+      color: #80cbc4;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+    .refresh-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #69f0ae;
+      display: inline-block;
+      margin-right: 4px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* ── 统计卡片行 ── */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      padding: 0 20px 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .stat-card {
+      flex: 1;
+      min-width: 130px;
+      max-width: 220px;
+      background: rgba(255,255,255,0.07);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 14px 16px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-3px); }
+    .stat-val {
+      font-size: clamp(1.6em, 5vw, 2.4em);
+      font-weight: 900;
+      background: linear-gradient(135deg, #80deea, #69f0ae);
+      -webkit-background-clip: text;
+      color: transparent;
+      background-clip: text;
+    }
+    .stat-lbl {
+      font-size: clamp(0.72em, 2.2vw, 0.88em);
+      color: #b2dfdb;
+      font-weight: 700;
+      margin-top: 3px;
+    }
+
+    /* ── 图表区域 ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 0 20px 24px;
+    }
+    @media (max-width: 700px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .refresh-info { display: none; }
+    }
+
+    .chart-card {
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 20px;
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+    }
+    .chart-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 20px 20px 0 0;
+    }
+    .chart-card:nth-child(1)::before { background: linear-gradient(90deg, #80deea, #4dd0e1); }
+    .chart-card:nth-child(2)::before { background: linear-gradient(90deg, #f48fb1, #f06292); }
+
+    .chart-title {
+      font-size: clamp(0.9em, 3vw, 1.15em);
+      font-weight: 900;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chart-card:nth-child(1) .chart-title { color: #80deea; }
+    .chart-card:nth-child(2) .chart-title { color: #f48fb1; }
+
+    .chart-wrap {
+      position: relative;
+      height: clamp(220px, 35vh, 340px);
+    }
+
+    /* ── 加载/错误状态 ── */
+    .status-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(13,27,62,0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      gap: 16px;
+      transition: opacity 0.5s;
+    }
+    .status-overlay.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 50px; height: 50px;
+      border: 4px solid rgba(128,222,234,0.2);
+      border-top-color: #80deea;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-text {
+      font-size: 1em;
+      color: #80deea;
+      font-weight: 800;
+    }
+    .error-icon { font-size: 2.5em; }
+
+    /* ── 数据列表 ── */
+    .data-table-card {
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.09);
+      border-radius: 20px;
+      padding: 20px;
+      margin: 0 20px 24px;
+      backdrop-filter: blur(12px);
+      overflow-x: auto;
+    }
+    .data-table-title {
+      font-size: clamp(0.9em, 3vw, 1.1em);
+      font-weight: 900;
+      color: #ce93d8;
+      margin-bottom: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: clamp(0.75em, 2.2vw, 0.9em);
+    }
+    th {
+      background: rgba(156,39,176,0.25);
+      color: #ce93d8;
+      padding: 8px 12px;
+      text-align: center;
+      font-weight: 900;
+    }
+    td {
+      padding: 7px 12px;
+      text-align: center;
+      color: #e0f2f1;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.04); }
+
+    /* ── 底部 ── */
+    .footer {
+      text-align: center;
+      padding: 0 20px 20px;
+      font-size: 0.78em;
+      color: rgba(128,203,196,0.5);
+      font-weight: 700;
+    }
+
+    /* ── 空数据提示 ── */
+    .empty-hint {
+      text-align: center;
+      padding: 40px 20px;
+      color: rgba(128,203,196,0.5);
+      font-size: 0.9em;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 加载遮罩 -->
+<div class="status-overlay" id="status-overlay">
+  <div class="spinner"></div>
+  <div class="status-text" id="status-text">正在加载实验数据…</div>
+</div>
+
+<!-- 顶部标题 -->
+<div class="header">
+  <h1>🌸 凤仙花实验数据大屏</h1>
+  <div class="subtitle">种子数量与植株生长关系分析</div>
+  <div class="refresh-info">
+    <div><span class="refresh-dot"></span>实时更新</div>
+    <div id="last-update">—</div>
+    <div id="countdown-text" style="font-size:0.85em;color:#4dd0e1;">30s 后刷新</div>
+  </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-val" id="stat-total">—</div>
+    <div class="stat-lbl">📊 总提交组数</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" id="stat-avg-seeds">—</div>
+    <div class="stat-lbl">🌰 平均种子数（颗）</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" id="stat-avg-height">—</div>
+    <div class="stat-lbl">🌿 平均植株高度（cm）</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" id="stat-avg-leaves">—</div>
+    <div class="stat-lbl">🍃 平均叶片个数（片）</div>
+  </div>
+</div>
+
+<!-- 图表 -->
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-title">📏 种子数量 → 植株高度</div>
+    <div class="chart-wrap">
+      <canvas id="chart-height"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">🍃 种子数量 → 叶片个数</div>
+    <div class="chart-wrap">
+      <canvas id="chart-leaves"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- 原始数据表格 -->
+<div class="data-table-card">
+  <div class="data-table-title">📋 所有提交记录</div>
+  <div id="table-wrap">
+    <div class="empty-hint">等待数据加载…</div>
+  </div>
+</div>
+
+<div class="footer">
+  数据来源：QuickForm · https://quickform.cn/api/kyonxtrtel/all &nbsp;|&nbsp; 每 30 秒自动刷新
+</div>
+
+<script>
+const API_URL = 'https://quickform.cn/api/kyonxtrtel/all';
+const REFRESH_INTERVAL = 30000; // 30秒
+
+let chartHeight = null;
+let chartLeaves = null;
+let countdownTimer = null;
+let countdownSec = 30;
+
+/* ── 通用图表配置 ── */
+const CHART_BASE = {
+  type: 'bar',
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 600, easing: 'easeOutQuart' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(13,27,62,0.92)',
+        titleColor: '#80deea',
+        bodyColor: '#e0f2f1',
+        borderColor: 'rgba(128,222,234,0.3)',
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 10,
+        titleFont: { weight: '900', size: 13 },
+        bodyFont:  { weight: '700', size: 12 },
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: '种子数量（颗）', color: '#80cbc4', font: { weight: '800', size: 12 } },
+        grid:  { color: 'rgba(255,255,255,0.06)' },
+        ticks: { color: '#b2dfdb', font: { weight: '700' } },
+      },
+      y: {
+        beginAtZero: true,
+        grid:  { color: 'rgba(255,255,255,0.08)' },
+        ticks: { color: '#b2dfdb', font: { weight: '700' } },
+      }
+    }
+  }
+};
+
+/* ── 创建初始图表 ── */
+function initCharts() {
+  const ctxH = document.getElementById('chart-height').getContext('2d');
+  chartHeight = new Chart(ctxH, {
+    ...JSON.parse(JSON.stringify(CHART_BASE)),
+    data: { labels: [], datasets: [{
+      label: '植株高度 (cm)',
+      data: [],
+      backgroundColor: 'rgba(77,208,225,0.55)',
+      borderColor: '#4dd0e1',
+      borderWidth: 2,
+      borderRadius: 8,
+      borderSkipped: false,
+    }] }
+  });
+  chartHeight.options.scales.y.title = { display: true, text: '植株高度（cm）', color: '#80cbc4', font: { weight: '800', size: 12 } };
+  chartHeight.update();
+
+  const ctxL = document.getElementById('chart-leaves').getContext('2d');
+  chartLeaves = new Chart(ctxL, {
+    ...JSON.parse(JSON.stringify(CHART_BASE)),
+    data: { labels: [], datasets: [{
+      label: '叶片个数 (片)',
+      data: [],
+      backgroundColor: 'rgba(244,143,177,0.55)',
+      borderColor: '#f48fb1',
+      borderWidth: 2,
+      borderRadius: 8,
+      borderSkipped: false,
+    }] }
+  });
+  chartLeaves.options.scales.y.title = { display: true, text: '叶片个数（片）', color: '#80cbc4', font: { weight: '800', size: 12 } };
+  chartLeaves.update();
+}
+
+/* ── 数据处理与渲染 ── */
+function processAndRender(submissions) {
+  // 筛选含有效字段的记录
+  const valid = submissions.filter(s =>
+    s['种子数量'] != null && (s['植株高度_cm'] != null || s['叶片个数'] != null)
+  );
+
+  if (valid.length === 0) {
+    showEmpty();
+    updateStats(0, 0, 0, 0);
+    return;
+  }
+
+  // ── 按种子数量分组，计算平均值 ──
+  const groups = {};
+  valid.forEach(s => {
+    const key = Number(s['种子数量']);
+    if (!groups[key]) groups[key] = { heights: [], leaves: [] };
+    if (s['植株高度_cm'] != null) groups[key].heights.push(Number(s['植株高度_cm']));
+    if (s['叶片个数']   != null) groups[key].leaves.push(Number(s['叶片个数']));
+  });
+
+  const sortedKeys = Object.keys(groups).map(Number).sort((a, b) => a - b);
+  const labels      = sortedKeys.map(k => `${k} 颗`);
+  const avgHeights  = sortedKeys.map(k => {
+    const arr = groups[k].heights;
+    return arr.length ? +(arr.reduce((a,b)=>a+b,0) / arr.length).toFixed(1) : null;
+  });
+  const avgLeaves   = sortedKeys.map(k => {
+    const arr = groups[k].leaves;
+    return arr.length ? Math.round(arr.reduce((a,b)=>a+b,0) / arr.length) : null;
+  });
+
+  // 更新柱状图
+  chartHeight.data.labels = labels;
+  chartHeight.data.datasets[0].data = avgHeights;
+  chartHeight.update('active');
+
+  chartLeaves.data.labels = labels;
+  chartLeaves.data.datasets[0].data = avgLeaves;
+  chartLeaves.update('active');
+
+  // ── 统计卡片 ──
+  const allSeeds  = valid.map(s => Number(s['种子数量']));
+  const allH      = valid.filter(s => s['植株高度_cm'] != null).map(s => Number(s['植株高度_cm']));
+  const allL      = valid.filter(s => s['叶片个数']   != null).map(s => Number(s['叶片个数']));
+  const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : '—';
+
+  updateStats(
+    valid.length,
+    avg(allSeeds),
+    allH.length ? avg(allH) : '—',
+    allL.length ? Math.round(allL.reduce((a,b)=>a+b,0)/allL.length) : '—'
+  );
+
+  // ── 数据表格 ──
+  renderTable(valid);
+}
+
+function updateStats(total, seeds, height, leaves) {
+  document.getElementById('stat-total').textContent  = total;
+  document.getElementById('stat-avg-seeds').textContent  = seeds;
+  document.getElementById('stat-avg-height').textContent = height;
+  document.getElementById('stat-avg-leaves').textContent = leaves;
+}
+
+function renderTable(rows) {
+  if (!rows.length) { showEmpty(); return; }
+  const sorted = [...rows].sort((a,b) => new Date(b.submitted_at||0) - new Date(a.submitted_at||0));
+  let html = `<table>
+    <thead><tr>
+      <th>#</th>
+      <th>提交时间</th>
+      <th>🌰 种子数量（颗）</th>
+      <th>🌿 植株高度（cm）</th>
+      <th>🍃 叶片个数（片）</th>
+    </tr></thead><tbody>`;
+  sorted.forEach((s, i) => {
+    const t = s.submitted_at ? s.submitted_at.replace('T',' ').substring(0,16) : '—';
+    html += `<tr>
+      <td>${i+1}</td>
+      <td>${t}</td>
+      <td>${s['种子数量'] ?? '—'}</td>
+      <td>${s['植株高度_cm'] ?? '—'}</td>
+      <td>${s['叶片个数'] ?? '—'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('table-wrap').innerHTML = html;
+}
+
+function showEmpty() {
+  chartHeight.data.labels = [];
+  chartHeight.data.datasets[0].data = [];
+  chartHeight.update();
+  chartLeaves.data.labels = [];
+  chartLeaves.data.datasets[0].data = [];
+  chartLeaves.update();
+  document.getElementById('table-wrap').innerHTML =
+    '<div class="empty-hint">📭 暂无数据，请在实验页面提交记录后刷新</div>';
+}
+
+/* ── 拉取数据 ── */
+async function fetchData() {
+  showLoading(true);
+  try {
+    const res = await fetch(API_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const subs = json.submissions || [];
+    processAndRender(subs);
+    document.getElementById('last-update').textContent =
+      '更新：' + new Date().toLocaleTimeString('zh-CN');
+    showLoading(false);
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+function showLoading(show) {
+  const el = document.getElementById('status-overlay');
+  if (show) {
+    document.getElementById('status-text').textContent = '正在加载实验数据…';
+    el.innerHTML = `<div class="spinner"></div><div class="status-text" id="status-text">正在加载实验数据…</div>`;
+    el.classList.remove('hidden');
+  } else {
+    el.classList.add('hidden');
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('status-overlay');
+  el.innerHTML = `
+    <div class="error-icon">⚠️</div>
+    <div class="status-text">数据加载失败</div>
+    <div style="color:#f48fb1;font-size:0.85em;font-weight:700;">${msg}</div>
+    <button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;border:2px solid #f48fb1;background:transparent;color:#f48fb1;border-radius:10px;font-weight:800;cursor:pointer;font-size:0.9em;">重新加载</button>`;
+  el.classList.remove('hidden');
+}
+
+/* ── 倒计时 ── */
+function startCountdown() {
+  clearInterval(countdownTimer);
+  countdownSec = 30;
+  countdownTimer = setInterval(() => {
+    countdownSec--;
+    const el = document.getElementById('countdown-text');
+    if (el) el.textContent = `${countdownSec}s 后刷新`;
+    if (countdownSec <= 0) {
+      countdownSec = 30;
+      fetchData();
+    }
+  }, 1000);
+}
+
+/* ── 启动 ── */
+initCharts();
+fetchData().then(() => startCountdown());
+</script>
+</body>
+</html>

@@ -246,6 +246,25 @@
     }
     button.reset-btn:hover, button.reset-btn:active { background: #ffca28; }
 
+    .chart-link-btn {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #9c27b0, #e91e63);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: clamp(0.9em, 3vw, 1.05em);
+      font-weight: 800;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.02em;
+    }
+    .chart-link-btn:hover { opacity: 0.88; }
+    .chart-link-btn:active { transform: scale(0.97); }
+
     /* 移动端触摸提示 */
     .mobile-hint {
       display: none;
@@ -476,47 +495,26 @@
     </div>
     
     <button class="reset-btn" onclick="location.reload()">🔄 重置实验</button>
+    <a class="chart-link-btn" href="chart.html" target="_blank">📊 查看数据大屏</a>
 
     <!-- 实验数据记录表单 -->
     <div class="data-form-box">
       <div class="data-form-title">📝 填写实验记录</div>
 
-      <!-- 种子数量与植株高度 -->
       <div class="form-section">
-        <div class="form-section-label">🌱 种子数量 与 植株高度</div>
         <div class="form-row">
-          <label>种子数量：</label>
-          <input class="form-input" id="fd-seeds" type="number" min="1" placeholder="颗数" />
+          <label>🌰 种子数量：</label>
+          <input class="form-input" id="fd-seeds" type="number" min="1" placeholder="颗" />
           <span class="form-unit">颗</span>
         </div>
         <div class="form-row">
-          <label>槽A 株高：</label>
-          <input class="form-input" id="fd-height-a" type="number" min="0" step="0.1" placeholder="cm" />
+          <label>🌿 植株高度：</label>
+          <input class="form-input" id="fd-height" type="number" min="0" step="0.1" placeholder="cm" />
           <span class="form-unit">cm</span>
         </div>
         <div class="form-row">
-          <label>槽B 株高：</label>
-          <input class="form-input" id="fd-height-b" type="number" min="0" step="0.1" placeholder="cm" />
-          <span class="form-unit">cm</span>
-        </div>
-      </div>
-
-      <!-- 种子数量与叶片个数 -->
-      <div class="form-section">
-        <div class="form-section-label">🍃 种子数量 与 叶片个数</div>
-        <div class="form-row">
-          <label>种子数量：</label>
-          <input class="form-input" id="fd-seeds2" type="number" min="1" placeholder="颗数" />
-          <span class="form-unit">颗</span>
-        </div>
-        <div class="form-row">
-          <label>槽A 叶片：</label>
-          <input class="form-input" id="fd-leaves-a" type="number" min="0" placeholder="片" />
-          <span class="form-unit">片</span>
-        </div>
-        <div class="form-row">
-          <label>槽B 叶片：</label>
-          <input class="form-input" id="fd-leaves-b" type="number" min="0" placeholder="片" />
+          <label>🍃 叶片个数：</label>
+          <input class="form-input" id="fd-leaves" type="number" min="0" placeholder="片" />
           <span class="form-unit">片</span>
         </div>
       </div>
@@ -972,28 +970,31 @@ function prefillFormData() {
   const pA = planters['planter-small'];
   const pB = planters['planter-large'];
 
-  // 种子数量（两组共用同一个配置）
-  const seedsInput  = document.getElementById('fd-seeds');
-  const seedsInput2 = document.getElementById('fd-seeds2');
-  if (seedsInput  && !seedsInput.dataset.userEdited)  seedsInput.value  = total;
-  if (seedsInput2 && !seedsInput2.dataset.userEdited) seedsInput2.value = total;
+  const seedsInput = document.getElementById('fd-seeds');
+  if (seedsInput && !seedsInput.dataset.userEdited) seedsInput.value = total;
 
-  // 植株高度
-  const haInput = document.getElementById('fd-height-a');
-  const hbInput = document.getElementById('fd-height-b');
-  if (haInput && !haInput.dataset.userEdited) haInput.value = pA.curH || '';
-  if (hbInput && !hbInput.dataset.userEdited) hbInput.value = pB.curH || '';
+  // 植株高度：取两槽平均值（保留1位小数）
+  const hInput = document.getElementById('fd-height');
+  if (hInput && !hInput.dataset.userEdited) {
+    const hA = parseFloat(pA.curH) || 0;
+    const hB = parseFloat(pB.curH) || 0;
+    const avg = hA > 0 || hB > 0 ? ((hA + hB) / 2).toFixed(1) : '';
+    hInput.value = avg;
+  }
 
-  // 叶片个数
-  const laInput = document.getElementById('fd-leaves-a');
-  const lbInput = document.getElementById('fd-leaves-b');
-  if (laInput && !laInput.dataset.userEdited) laInput.value = pA.curL || '';
-  if (lbInput && !lbInput.dataset.userEdited) lbInput.value = pB.curL || '';
+  // 叶片个数：取两槽平均值（取整）
+  const lInput = document.getElementById('fd-leaves');
+  if (lInput && !lInput.dataset.userEdited) {
+    const lA = parseInt(pA.curL) || 0;
+    const lB = parseInt(pB.curL) || 0;
+    const avg = lA > 0 || lB > 0 ? Math.round((lA + lB) / 2) : '';
+    lInput.value = avg;
+  }
 }
 
 // 标记用户手动编辑过的字段，防止被自动覆盖
 document.addEventListener('DOMContentLoaded', () => {
-  ['fd-seeds','fd-seeds2','fd-height-a','fd-height-b','fd-leaves-a','fd-leaves-b'].forEach(id => {
+  ['fd-seeds', 'fd-height', 'fd-leaves'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', () => { el.dataset.userEdited = '1'; });
   });
@@ -1004,14 +1005,11 @@ async function submitExperimentData() {
   const btn   = document.getElementById('submit-data-btn');
   const toast = document.getElementById('submit-toast');
 
-  const seeds    = document.getElementById('fd-seeds').value.trim();
-  const heightA  = document.getElementById('fd-height-a').value.trim();
-  const heightB  = document.getElementById('fd-height-b').value.trim();
-  const seeds2   = document.getElementById('fd-seeds2').value.trim();
-  const leavesA  = document.getElementById('fd-leaves-a').value.trim();
-  const leavesB  = document.getElementById('fd-leaves-b').value.trim();
+  const seeds  = document.getElementById('fd-seeds').value.trim();
+  const height = document.getElementById('fd-height').value.trim();
+  const leaves = document.getElementById('fd-leaves').value.trim();
 
-  if (!seeds || !heightA || !heightB || !seeds2 || !leavesA || !leavesB) {
+  if (!seeds || !height || !leaves) {
     toast.className = 'submit-toast error';
     toast.textContent = '⚠️ 请填写所有数据后再提交！';
     return;
@@ -1023,12 +1021,9 @@ async function submitExperimentData() {
   toast.textContent = '';
 
   const payload = {
-    种子数量_高度实验: Number(seeds),
-    槽A植株高度_cm: Number(heightA),
-    槽B植株高度_cm: Number(heightB),
-    种子数量_叶片实验: Number(seeds2),
-    槽A叶片个数: Number(leavesA),
-    槽B叶片个数: Number(leavesB),
+    种子数量: Number(seeds),
+    植株高度_cm: Number(height),
+    叶片个数: Number(leaves),
   };
 
   try {
