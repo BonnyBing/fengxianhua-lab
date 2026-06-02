@@ -304,6 +304,97 @@
       border: 1px dashed #aed581;
       font-size: clamp(0.75em, 2.5vw, 0.9em);
     }
+
+    /* ── 实验数据记录表单 ── */
+    .data-form-box {
+      background: linear-gradient(135deg, #fce4ec, #f3e5f5);
+      border: 2px solid #f48fb1;
+      border-radius: 14px;
+      padding: 14px;
+      margin-top: 8px;
+    }
+    .data-form-title {
+      font-weight: 900;
+      font-size: clamp(0.88em, 3vw, 1.05em);
+      color: #880e4f;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .form-section {
+      background: rgba(255,255,255,0.72);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(244,143,177,0.35);
+    }
+    .form-section-label {
+      font-weight: 800;
+      font-size: clamp(0.78em, 2.5vw, 0.9em);
+      color: #6a1b9a;
+      margin-bottom: 7px;
+    }
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+      font-size: clamp(0.75em, 2.3vw, 0.88em);
+      color: #444;
+      font-weight: 700;
+    }
+    .form-row label {
+      flex: 1 0 auto;
+      white-space: nowrap;
+    }
+    .form-input {
+      width: 70px;
+      padding: 4px 7px;
+      border: 1.5px solid #ce93d8;
+      border-radius: 7px;
+      font-size: clamp(0.82em, 2.5vw, 0.95em);
+      font-weight: 800;
+      color: #4a148c;
+      background: rgba(255,255,255,0.9);
+      outline: none;
+      transition: border-color 0.2s;
+      text-align: center;
+    }
+    .form-input:focus { border-color: #9c27b0; box-shadow: 0 0 0 2px rgba(156,39,176,0.15); }
+    .form-unit {
+      font-size: 0.82em;
+      color: #888;
+      font-weight: 700;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #9c27b0, #e91e63);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: clamp(0.9em, 3vw, 1.05em);
+      font-weight: 900;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.03em;
+    }
+    .submit-btn:hover { opacity: 0.9; }
+    .submit-btn:active { transform: scale(0.97); }
+    .submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .submit-toast {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: clamp(0.78em, 2.5vw, 0.88em);
+      font-weight: 800;
+      text-align: center;
+      display: none;
+    }
+    .submit-toast.success { background: #e8f5e9; color: #2e7d32; border: 1.5px solid #a5d6a7; display: block; }
+    .submit-toast.error   { background: #ffebee; color: #b71c1c; border: 1.5px solid #ef9a9a; display: block; }
   </style>
 </head>
 <body>
@@ -385,6 +476,54 @@
     </div>
     
     <button class="reset-btn" onclick="location.reload()">🔄 重置实验</button>
+
+    <!-- 实验数据记录表单 -->
+    <div class="data-form-box">
+      <div class="data-form-title">📝 填写实验记录</div>
+
+      <!-- 种子数量与植株高度 -->
+      <div class="form-section">
+        <div class="form-section-label">🌱 种子数量 与 植株高度</div>
+        <div class="form-row">
+          <label>种子数量：</label>
+          <input class="form-input" id="fd-seeds" type="number" min="1" placeholder="颗数" />
+          <span class="form-unit">颗</span>
+        </div>
+        <div class="form-row">
+          <label>槽A 株高：</label>
+          <input class="form-input" id="fd-height-a" type="number" min="0" step="0.1" placeholder="cm" />
+          <span class="form-unit">cm</span>
+        </div>
+        <div class="form-row">
+          <label>槽B 株高：</label>
+          <input class="form-input" id="fd-height-b" type="number" min="0" step="0.1" placeholder="cm" />
+          <span class="form-unit">cm</span>
+        </div>
+      </div>
+
+      <!-- 种子数量与叶片个数 -->
+      <div class="form-section">
+        <div class="form-section-label">🍃 种子数量 与 叶片个数</div>
+        <div class="form-row">
+          <label>种子数量：</label>
+          <input class="form-input" id="fd-seeds2" type="number" min="1" placeholder="颗数" />
+          <span class="form-unit">颗</span>
+        </div>
+        <div class="form-row">
+          <label>槽A 叶片：</label>
+          <input class="form-input" id="fd-leaves-a" type="number" min="0" placeholder="片" />
+          <span class="form-unit">片</span>
+        </div>
+        <div class="form-row">
+          <label>槽B 叶片：</label>
+          <input class="form-input" id="fd-leaves-b" type="number" min="0" placeholder="片" />
+          <span class="form-unit">片</span>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submit-data-btn" onclick="submitExperimentData()">📤 提交实验数据</button>
+      <div class="submit-toast" id="submit-toast"></div>
+    </div>
   </div>
   
   <!-- 种植区 -->
@@ -716,6 +855,7 @@ function renderPlants(p) {
 function updateDataBoard(p) {
   document.getElementById(p.hId).textContent = p.curH || "0.0";
   document.getElementById(p.lId).textContent = p.curL || "0";
+  prefillFormData();
 }
 
 function makeLocDiv(x, y, inner) {
@@ -825,6 +965,93 @@ const style = document.createElement('style');
 style.innerHTML = `@keyframes fall { to { transform: translateY(110vh) rotate(720deg); }}`;
 document.head.appendChild(style);
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ── 自动预填实验数据 ── */
+function prefillFormData() {
+  const total = config.rcount * config.ccount;
+  const pA = planters['planter-small'];
+  const pB = planters['planter-large'];
+
+  // 种子数量（两组共用同一个配置）
+  const seedsInput  = document.getElementById('fd-seeds');
+  const seedsInput2 = document.getElementById('fd-seeds2');
+  if (seedsInput  && !seedsInput.dataset.userEdited)  seedsInput.value  = total;
+  if (seedsInput2 && !seedsInput2.dataset.userEdited) seedsInput2.value = total;
+
+  // 植株高度
+  const haInput = document.getElementById('fd-height-a');
+  const hbInput = document.getElementById('fd-height-b');
+  if (haInput && !haInput.dataset.userEdited) haInput.value = pA.curH || '';
+  if (hbInput && !hbInput.dataset.userEdited) hbInput.value = pB.curH || '';
+
+  // 叶片个数
+  const laInput = document.getElementById('fd-leaves-a');
+  const lbInput = document.getElementById('fd-leaves-b');
+  if (laInput && !laInput.dataset.userEdited) laInput.value = pA.curL || '';
+  if (lbInput && !lbInput.dataset.userEdited) lbInput.value = pB.curL || '';
+}
+
+// 标记用户手动编辑过的字段，防止被自动覆盖
+document.addEventListener('DOMContentLoaded', () => {
+  ['fd-seeds','fd-seeds2','fd-height-a','fd-height-b','fd-leaves-a','fd-leaves-b'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => { el.dataset.userEdited = '1'; });
+  });
+});
+
+/* ── 提交实验数据 ── */
+async function submitExperimentData() {
+  const btn   = document.getElementById('submit-data-btn');
+  const toast = document.getElementById('submit-toast');
+
+  const seeds    = document.getElementById('fd-seeds').value.trim();
+  const heightA  = document.getElementById('fd-height-a').value.trim();
+  const heightB  = document.getElementById('fd-height-b').value.trim();
+  const seeds2   = document.getElementById('fd-seeds2').value.trim();
+  const leavesA  = document.getElementById('fd-leaves-a').value.trim();
+  const leavesB  = document.getElementById('fd-leaves-b').value.trim();
+
+  if (!seeds || !heightA || !heightB || !seeds2 || !leavesA || !leavesB) {
+    toast.className = 'submit-toast error';
+    toast.textContent = '⚠️ 请填写所有数据后再提交！';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 提交中...';
+  toast.className = 'submit-toast';
+  toast.textContent = '';
+
+  const payload = {
+    种子数量_高度实验: Number(seeds),
+    槽A植株高度_cm: Number(heightA),
+    槽B植株高度_cm: Number(heightB),
+    种子数量_叶片实验: Number(seeds2),
+    槽A叶片个数: Number(leavesA),
+    槽B叶片个数: Number(leavesB),
+  };
+
+  try {
+    const res = await fetch('https://quickform.cn/api/kyonxtrtel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      toast.className = 'submit-toast success';
+      toast.textContent = '✅ 数据提交成功！感谢记录！';
+      btn.textContent = '✅ 已提交';
+    } else {
+      throw new Error(`HTTP ${res.status}`);
+    }
+  } catch (err) {
+    toast.className = 'submit-toast error';
+    toast.textContent = `❌ 提交失败，请重试（${err.message}）`;
+    btn.disabled = false;
+    btn.textContent = '📤 提交实验数据';
+  }
+}
 </script>
 </body>
 </html>
