@@ -253,22 +253,10 @@
 </div>
 
 <!-- 统计卡片 -->
-<div class="stats-row">
+<div class="stats-row" style="justify-content:center;">
   <div class="stat-card">
     <div class="stat-val" id="stat-total">—</div>
     <div class="stat-lbl">📊 总提交组数</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-val" id="stat-avg-seeds">—</div>
-    <div class="stat-lbl">🌰 平均种子数（颗）</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-val" id="stat-avg-height">—</div>
-    <div class="stat-lbl">🌿 平均植株高度（cm）</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-val" id="stat-avg-leaves">—</div>
-    <div class="stat-lbl">🍃 平均叶片个数（片）</div>
   </div>
 </div>
 
@@ -389,7 +377,7 @@ function processAndRender(submissions) {
 
   if (valid.length === 0) {
     showEmpty();
-    updateStats(0, 0, 0, 0);
+    updateStats(0);
     return;
   }
 
@@ -428,22 +416,14 @@ function processAndRender(submissions) {
   const allL      = valid.filter(s => s['叶片个数']   != null).map(s => Number(s['叶片个数']));
   const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : '—';
 
-  updateStats(
-    valid.length,
-    avg(allSeeds),
-    allH.length ? avg(allH) : '—',
-    allL.length ? Math.round(allL.reduce((a,b)=>a+b,0)/allL.length) : '—'
-  );
+  updateStats(valid.length);
 
   // ── 数据表格 ──
   renderTable(valid);
 }
 
-function updateStats(total, seeds, height, leaves) {
-  document.getElementById('stat-total').textContent  = total;
-  document.getElementById('stat-avg-seeds').textContent  = seeds;
-  document.getElementById('stat-avg-height').textContent = height;
-  document.getElementById('stat-avg-leaves').textContent = leaves;
+function updateStats(total) {
+  document.getElementById('stat-total').textContent = total;
 }
 
 function renderTable(rows) {
