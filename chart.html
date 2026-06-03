@@ -292,6 +292,12 @@
 const API_URL = 'https://quickform.cn/api/kyonxtrtel/all';
 const REFRESH_INTERVAL = 30000; // 30秒
 
+/* 与 index.html 实验模拟一致的 Y 轴范围（renderPlants：maxH 45/30/15 cm，maxL 14/8/4 片） */
+const EXPERIMENT_SCALES = {
+  height: { min: 0, max: 50, step: 5, title: '植株高度（cm）' },
+  leaves: { min: 0, max: 16, step: 2, title: '叶片个数（片）' },
+};
+
 let chartHeight = null;
 let chartLeaves = null;
 let countdownTimer = null;
@@ -333,6 +339,28 @@ const CHART_BASE = {
   }
 };
 
+/* ── 固定 Y 轴刻度（与实验页真实 cm / 片 单位一致） ── */
+function applyExperimentYScale(chart, scaleCfg) {
+  const y = chart.options.scales.y;
+  y.min = scaleCfg.min;
+  y.max = scaleCfg.max;
+  y.grace = 0;
+  y.title = {
+    display: true,
+    text: scaleCfg.title,
+    color: '#80cbc4',
+    font: { weight: '800', size: 12 },
+  };
+  y.ticks = {
+    ...y.ticks,
+    stepSize: scaleCfg.step,
+    precision: scaleCfg.step >= 1 ? 0 : 1,
+    callback: v => (Number.isInteger(scaleCfg.step) || scaleCfg.step >= 1)
+      ? v
+      : (Math.round(v * 10) / 10),
+  };
+}
+
 /* ── 创建初始图表 ── */
 function initCharts() {
   const ctxH = document.getElementById('chart-height').getContext('2d');
@@ -348,7 +376,7 @@ function initCharts() {
       borderSkipped: false,
     }] }
   });
-  chartHeight.options.scales.y.title = { display: true, text: '植株高度（cm）', color: '#80cbc4', font: { weight: '800', size: 12 } };
+  applyExperimentYScale(chartHeight, EXPERIMENT_SCALES.height);
   chartHeight.update();
 
   const ctxL = document.getElementById('chart-leaves').getContext('2d');
@@ -364,7 +392,7 @@ function initCharts() {
       borderSkipped: false,
     }] }
   });
-  chartLeaves.options.scales.y.title = { display: true, text: '叶片个数（片）', color: '#80cbc4', font: { weight: '800', size: 12 } };
+  applyExperimentYScale(chartLeaves, EXPERIMENT_SCALES.leaves);
   chartLeaves.update();
 }
 
@@ -401,13 +429,15 @@ function processAndRender(submissions) {
     return arr.length ? Math.round(arr.reduce((a,b)=>a+b,0) / arr.length) : null;
   });
 
-  // 更新柱状图
+  // 更新柱状图（保持与实验页一致的固定坐标轴）
   chartHeight.data.labels = labels;
   chartHeight.data.datasets[0].data = avgHeights;
+  applyExperimentYScale(chartHeight, EXPERIMENT_SCALES.height);
   chartHeight.update('active');
 
   chartLeaves.data.labels = labels;
   chartLeaves.data.datasets[0].data = avgLeaves;
+  applyExperimentYScale(chartLeaves, EXPERIMENT_SCALES.leaves);
   chartLeaves.update('active');
 
   // ── 统计卡片 ──
@@ -454,9 +484,11 @@ function renderTable(rows) {
 function showEmpty() {
   chartHeight.data.labels = [];
   chartHeight.data.datasets[0].data = [];
+  applyExperimentYScale(chartHeight, EXPERIMENT_SCALES.height);
   chartHeight.update();
   chartLeaves.data.labels = [];
   chartLeaves.data.datasets[0].data = [];
+  applyExperimentYScale(chartLeaves, EXPERIMENT_SCALES.leaves);
   chartLeaves.update();
   document.getElementById('table-wrap').innerHTML =
     '<div class="empty-hint">📭 暂无数据，请在实验页面提交记录后刷新</div>';
