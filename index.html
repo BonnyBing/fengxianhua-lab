@@ -422,8 +422,7 @@
       </div>
       <div id="auto-spacing-info">
         <div style="font-weight:900;color:#33691e;margin-bottom:4px;">📐 共 <strong>10</strong> 颗种子</div>
-        <div>🌱 槽A: 行距 10.0cm · 株距 8.3cm</div>
-        <div>🌱 槽B: 行距 10.0cm · 株距 8.3cm</div>
+        <div>🌱 种植槽: 行距 10.0cm · 株距 8.3cm</div>
       </div>
     </div>
     
@@ -449,28 +448,18 @@
 
     <!-- 移动端点击投放按钮 -->
     <div class="tap-zone" id="tap-zone">
-      <div class="tap-btn" id="tap-btn-A" onclick="tapApply('planter-small')">➕ 投放到槽A</div>
-      <div class="tap-btn" id="tap-btn-B" onclick="tapApply('planter-large')">➕ 投放到槽B</div>
+      <div class="tap-btn" id="tap-btn-A" onclick="tapApply('planter-main')">➕ 投放到种植槽</div>
     </div>
     
     <div class="config-box" style="margin-top:4px; background:#e0f7fa; border-color:#80deea;">
-      <div class="config-title" style="color:#006064;">📊 实验数据对比</div>
+      <div class="config-title" style="color:#006064;">📊 实验数据</div>
       
-      <!-- 小号槽数据 -->
-      <div style="background:rgba(255,255,255,0.7); box-shadow:0 2px 4px rgba(0,0,0,0.05); padding:8px 10px; border-radius:10px; margin-bottom:8px;">
-        <div style="font-weight:900; color:#00838f; font-size:0.85em; margin-bottom:4px;">🌱 种植槽 A (50cm × 30cm)</div>
+      <!-- 种植槽数据 -->
+      <div style="background:rgba(255,255,255,0.7); box-shadow:0 2px 4px rgba(0,0,0,0.05); padding:8px 10px; border-radius:10px;">
+        <div style="font-weight:900; color:#00838f; font-size:0.85em; margin-bottom:4px;">🌱 种植槽 (50cm × 30cm)</div>
         <div class="compare-row">
           <div>株高: <strong id="d-sma-h" style="color:#00796b; font-size:1.2em;">0.0</strong> cm</div>
           <div>叶片: <strong id="d-sma-l" style="color:#00796b; font-size:1.2em;">0</strong> 片</div>
-        </div>
-      </div>
-      
-      <!-- 第二个槽数据 -->
-      <div style="background:rgba(255,255,255,0.7); box-shadow:0 2px 4px rgba(0,0,0,0.05); padding:8px 10px; border-radius:10px;">
-        <div style="font-weight:900; color:#00838f; font-size:0.85em; margin-bottom:4px;">🌱 种植槽 B (50cm × 30cm)</div>
-        <div class="compare-row">
-          <div>株高: <strong id="d-lar-h" style="color:#00796b; font-size:1.2em;">0.0</strong> cm</div>
-          <div>叶片: <strong id="d-lar-l" style="color:#00796b; font-size:1.2em;">0</strong> 片</div>
         </div>
       </div>
     </div>
@@ -508,21 +497,12 @@
   <div class="main-area" id="main-area">
     <div class="troughs-container">
       
-      <!-- 小号槽 -->
+      <!-- 种植槽 -->
       <div class="planter-wrapper">
-        <div class="planter-box" id="planter-small">
-          <div class="planter-label">种植槽 A（50cm × 30cm）</div>
-          <div class="plant-layer" id="layer-small"></div>
-          <div class="progress-overlay" id="prog-small">待播种...</div>
-        </div>
-      </div>
-
-      <!-- 第二个槽 -->
-      <div class="planter-wrapper">
-        <div class="planter-box" id="planter-large">
-          <div class="planter-label">种植槽 B（50cm × 30cm）</div>
-          <div class="plant-layer" id="layer-large"></div>
-          <div class="progress-overlay" id="prog-large">待播种...</div>
+        <div class="planter-box" id="planter-main">
+          <div class="planter-label">种植槽（50cm × 30cm）</div>
+          <div class="plant-layer" id="layer-main"></div>
+          <div class="progress-overlay" id="prog-main">待播种...</div>
         </div>
       </div>
       
@@ -536,8 +516,7 @@ let config = { rcount: 2, ccount: 5 };
 let selectedTool = null; // 移动端选中的工具
 
 let planters = {
-  'planter-small': { id:'planter-small', layerId: 'layer-small', progId: 'prog-small', state: 0, plants: [], health: 'good', hId: 'd-sma-h', lId: 'd-sma-l' },
-  'planter-large': { id:'planter-large', layerId: 'layer-large', progId: 'prog-large', state: 0, plants: [], health: 'excellent', hId: 'd-lar-h', lId: 'd-lar-l' }
+  'planter-main': { id:'planter-main', layerId: 'layer-main', progId: 'prog-main', state: 0, plants: [], health: 'good', hId: 'd-sma-h', lId: 'd-sma-l' }
 };
 
 /* ── 种植槽尺寸动态计算 ── */
@@ -545,11 +524,11 @@ function updatePlanterSizes() {
   const isMobile = window.innerWidth <= 768;
   const maxW = isMobile ? window.innerWidth * 0.82 : 480;
   const heightPx = Math.max(100, Math.min(380, Math.round((config.rcount + 2) * 50)));
-  ['planter-small', 'planter-large'].forEach(id => {
-    const el = document.getElementById(id);
+  const el = document.getElementById('planter-main');
+  if (el) {
     el.style.height = heightPx + 'px';
     el.style.width = Math.min(maxW, el.offsetWidth || maxW) + 'px';
-  });
+  }
   updateSpacingInfo();
 }
 
@@ -561,8 +540,7 @@ function updateSpacingInfo() {
   if (el) {
     el.innerHTML = `
       <div style="font-weight:900;color:#33691e;margin-bottom:4px;">📐 共 <strong>${total}</strong> 颗种子</div>
-      <div>🌱 槽A: 行距 ${RS}cm · 株距 ${PS}cm</div>
-      <div>🌱 槽B: 行距 ${RS}cm · 株距 ${PS}cm</div>
+      <div>🌱 种植槽: 行距 ${RS}cm · 株距 ${PS}cm</div>
     `;
   }
 }
@@ -645,6 +623,7 @@ boxes.forEach(box => {
   box.addEventListener('dragover', e => {
     e.preventDefault();
     const p = planters[box.id];
+    if (!p) return;
     if (draggedTool === 'tool-seed' && p.state === 0) box.classList.add('drag-over');
     if ((draggedTool === 'tool-water' || draggedTool === 'tool-fertilizer') && p.state >= 2 && p.state < 6 && !p.locked) box.classList.add('drag-over');
   });
@@ -947,28 +926,23 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 /* ── 自动预填实验数据 ── */
 function prefillFormData() {
   const total = config.rcount * config.ccount;
-  const pA = planters['planter-small'];
-  const pB = planters['planter-large'];
+  const p = planters['planter-main'];
 
   const seedsInput = document.getElementById('fd-seeds');
   if (seedsInput && !seedsInput.dataset.userEdited) seedsInput.value = total;
 
-  // 植株高度：取两槽平均值（保留1位小数）
+  // 植株高度（保留1位小数）
   const hInput = document.getElementById('fd-height');
   if (hInput && !hInput.dataset.userEdited) {
-    const hA = parseFloat(pA.curH) || 0;
-    const hB = parseFloat(pB.curH) || 0;
-    const avg = hA > 0 || hB > 0 ? ((hA + hB) / 2).toFixed(1) : '';
-    hInput.value = avg;
+    const h = parseFloat(p.curH) || 0;
+    hInput.value = h > 0 ? h.toFixed(1) : '';
   }
 
-  // 叶片个数：取两槽平均值（取整）
+  // 叶片个数
   const lInput = document.getElementById('fd-leaves');
   if (lInput && !lInput.dataset.userEdited) {
-    const lA = parseInt(pA.curL) || 0;
-    const lB = parseInt(pB.curL) || 0;
-    const avg = lA > 0 || lB > 0 ? Math.round((lA + lB) / 2) : '';
-    lInput.value = avg;
+    const l = parseInt(p.curL) || 0;
+    lInput.value = l > 0 ? l : '';
   }
 }
 
@@ -1017,6 +991,17 @@ async function submitExperimentData() {
       toast.className = 'submit-toast success';
       toast.textContent = '✅ 数据提交成功！感谢记录！';
       btn.textContent = '✅ 已提交';
+      // 提交成功后自动清零输入框
+      setTimeout(() => {
+        ['fd-seeds', 'fd-height', 'fd-leaves'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) { el.value = ''; el.dataset.userEdited = ''; }
+        });
+        btn.disabled = false;
+        btn.textContent = '📤 提交实验数据';
+        toast.className = 'submit-toast';
+        toast.textContent = '';
+      }, 2000);
     } else {
       throw new Error(`HTTP ${res.status}`);
     }
